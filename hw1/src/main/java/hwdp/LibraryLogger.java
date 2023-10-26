@@ -32,4 +32,3 @@ public class LibraryLogger {
         return instance;
     }
 }
-9
