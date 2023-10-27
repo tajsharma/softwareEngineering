@@ -1,19 +1,21 @@
 package hwdp;
-import java.util.HashMap;
 
-// TODO HWDP P3
+import java.util.HashMap;
+import java.util.Map;
 
 public class SourceObserver implements Observer {
 	private String name;
-	private HashMap<Subject, String> subjectToPastStateName;
-	
-	public SourceObserver(String n) {
-		// TODO?
+	private Map<Subject, String> lastState = new HashMap<>();
+
+	public SourceObserver(String name) {
+		this.name = name;
 	}
 
 	@Override
-	public void update(Subject o) {
-		// TODO?
+	public void update(Subject subject) {
+		String prevState = lastState.getOrDefault(subject, "UNOBSERVED");
+		LibraryLogger.getInstance().writeLine(name + " OBSERVED " + subject + " LEAVING STATE: " + prevState);
+		lastState.put(subject, subject.getStateName());
 	}
 
 	@Override
@@ -21,3 +23,4 @@ public class SourceObserver implements Observer {
 		return name;
 	}
 }
+
