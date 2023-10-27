@@ -1,8 +1,12 @@
 package hwdp;
 
 public interface LBState {
-    void shelf(LibraryBook book);
-    void issue(LibraryBook book);
-    void extend(LibraryBook book);
-    void returnIt(LibraryBook book);
+    void shelf(LibraryBook book) throws BadOperationException;
+
+    void issue(LibraryBook book) throws BadOperationException;
+
+    void extend(LibraryBook book) throws BadOperationException;
+
+    void returnIt(LibraryBook book) throws BadOperationException;
 }
+
