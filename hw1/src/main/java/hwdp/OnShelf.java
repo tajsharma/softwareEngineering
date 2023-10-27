@@ -2,6 +2,7 @@ package hwdp;
 
 public class OnShelf implements LBState {
     private static OnShelf instance;
+
     private OnShelf() {}
 
     public static OnShelf getInstance() {
@@ -12,8 +13,8 @@ public class OnShelf implements LBState {
     }
 
     @Override
-    public void shelf(LibraryBook book) {
-        throw new UnsupportedOperationException();
+    public void shelf(LibraryBook book) throws BadOperationException {
+        throw new BadOperationException();
     }
 
     @Override
@@ -23,13 +24,12 @@ public class OnShelf implements LBState {
     }
 
     @Override
-    public void extend(LibraryBook book) {
-        throw new UnsupportedOperationException();
+    public void returnIt(LibraryBook book) throws BadOperationException {
+        throw new BadOperationException();
     }
-
     @Override
-    public void returnIt(LibraryBook book) {
-        throw new UnsupportedOperationException();
+    public void extend(LibraryBook book) throws BadOperationException {
+        throw new BadOperationException();
     }
 
     @Override
@@ -37,3 +37,5 @@ public class OnShelf implements LBState {
         return "OnShelf";
     }
 }
+
+
