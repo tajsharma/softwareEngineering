@@ -43,7 +43,7 @@ public class TM {
     }
 
     private static void describeTask(String[] args){
-        System.out.println("Entered Stop task");
+        System.out.println("Entered describe task");
     }
 
     private static void defineSizeTask(String[] args){
