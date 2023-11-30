@@ -34,7 +34,7 @@ public class TM {
     }
 
     private static void startTask(String[] args){
-        System.out.println("Entered start task");
+        System.out.println(args.length);
         return;
     }
 
