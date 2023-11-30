@@ -1,5 +1,11 @@
 package com.tajsharma;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 public class TM {
     public static void main(String[] args) {
         if(args.length ==0){
@@ -33,13 +39,23 @@ public class TM {
         }
     }
 
+    //private methods for each command
     private static void startTask(String[] args){
-        System.out.println(args.length);
+        //check if an argument for the task name was provided
+        if(args.length < 2){
+            System.out.println("No task name provided");
+        }
+
+
+
         return;
     }
 
     private static void stopTask(String[] args){
-        System.out.println("Entered Stop task");
+        if(args.length < 2){
+            System.out.println("No task name provided");
+        }
+
     }
 
     private static void describeTask(String[] args){
