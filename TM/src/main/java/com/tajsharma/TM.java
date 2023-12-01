@@ -44,17 +44,19 @@ public class TM {
         //check if an argument for the task name was provided
         if(args.length < 2){
             System.out.println("No task name provided");
+            return;
         }
+        String taskName = args[1];
+        logTaskAction("START", taskName);
 
-
-
-        return;
     }
 
     private static void stopTask(String[] args){
         if(args.length < 2){
             System.out.println("No task name provided");
         }
+        String taskName = args[1];
+        logTaskAction("STOP", taskName);
 
     }
 
@@ -78,5 +80,16 @@ public class TM {
         System.out.println("Entered summary task");
     }
 
+    private static void logTaskAction(String action, String taskName) {
+        try {
+            BufferedWriter writer = new BufferedWriter(new FileWriter("tasks.log", true));
+            LocalDateTime now = LocalDateTime.now();
+            String timestamp = now.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            writer.write(timestamp + " " + action + " " + taskName + "\n");
+            writer.close();
+        } catch (IOException e) {
+            System.out.println("An error occurred while writing to log.");
+        }
+    }
 
 }
