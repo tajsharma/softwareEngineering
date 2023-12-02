@@ -3,8 +3,6 @@ package com.tajsharma;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 public class TM {
     public static void main(String[] args) {
@@ -81,14 +79,11 @@ public class TM {
     }
 
     private static void logTaskAction(String action, String taskName) {
-        try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter("tasks.log", true));
-            LocalDateTime now = LocalDateTime.now();
-            String timestamp = now.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("tasks.txt", true))) {
+            long timestamp = System.currentTimeMillis();
             writer.write(timestamp + " " + action + " " + taskName + "\n");
-            writer.close();
         } catch (IOException e) {
-            System.out.println("An error occurred while writing to log.");
+            System.out.println("An error occurred while writing to the file.");
         }
     }
 
