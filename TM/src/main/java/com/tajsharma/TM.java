@@ -1,10 +1,13 @@
 package com.tajsharma;
-
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 public class TM {
+    private static Set<String> activeTasks = new HashSet<>();
     public static void main(String[] args) {
         if(args.length ==0){
             System.out.println("no command entered");
@@ -39,23 +42,31 @@ public class TM {
 
     //private methods for each command
     private static void startTask(String[] args){
-        //check if an argument for the task name was provided
         if(args.length < 2){
             System.out.println("No task name provided");
             return;
         }
         String taskName = args[1];
+        if(activeTasks.contains(taskName)){
+            System.out.println("Task already started");
+            return;
+        }
+        activeTasks.add(taskName);
         logTaskAction("START", taskName);
-
     }
 
     private static void stopTask(String[] args){
         if(args.length < 2){
             System.out.println("No task name provided");
+            return;
         }
         String taskName = args[1];
+        if(!activeTasks.contains(taskName)){
+            System.out.println("Task not started or already stopped");
+            return;
+        }
+        activeTasks.remove(taskName);
         logTaskAction("STOP", taskName);
-
     }
 
     private static void describeTask(String[] args){
@@ -81,10 +92,10 @@ public class TM {
     private static void logTaskAction(String action, String taskName) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("tasks.txt", true))) {
             long timestamp = System.currentTimeMillis();
-            writer.write(timestamp + " " + action + " " + taskName + "\n");
+            String readableTimestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(timestamp));
+            writer.write(readableTimestamp + " " + action + " " + taskName + "\n");
         } catch (IOException e) {
             System.out.println("An error occurred while writing to the file.");
         }
     }
-
 }
