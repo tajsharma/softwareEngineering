@@ -3,6 +3,7 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 public class TM {
     public static void main(String[] args) {
         TaskCommands taskCommands = new TaskCommands();
@@ -43,14 +44,15 @@ public class TM {
     //class encapsulating all the commands we want to allow
     public static class TaskCommands {
         Helpers helper = new Helpers();
+        private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
         public void startTask(String taskName) {
-            String record = LocalDateTime.now() + " start " + taskName;
+            String record = LocalDateTime.now().format(formatter) + " START " + taskName;
             helper.logToDataStore(record);
         }
 
         public void stopTask(String taskName) {
-            String record = LocalDateTime.now() + " stop " + taskName;
+            String record = LocalDateTime.now().format(formatter) + " STOP " + taskName;
             helper.logToDataStore(record);
         }
 
