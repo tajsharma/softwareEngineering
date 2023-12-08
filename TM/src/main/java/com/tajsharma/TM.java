@@ -25,15 +25,15 @@ public class TM {
                 taskCommands.stopTask(args[1]);
                 break;
             case "describe":
-                taskCommands.describeTask(args[1]);
+                taskCommands.describeTask(args);
                 break;
-          /*   case "size":
-                defineSizeTask(args);
+            case "size":
+                taskCommands.defineSizeTask(args);
                 break;
             case "rename":
-                renameTask(args);
+                taskCommands.renameTask(args);
                 break;
-            case "delete":
+          /*  case "delete":
                 deleteTask(args);
                 break;
             case "summary":
@@ -76,9 +76,56 @@ public class TM {
             taskStatus.put(taskName, false);
         }
 
-        public void describeTask(String taskName){
-            return;
+        public void describeTask(String[] args) {
+            if (!helper.checkArgLength(args, 3, "describe")) {
+                return;
+            }
+
+            String taskName = args[1];
+            String description = args[2];
+            String size = args.length > 3 ? args[3] : "";
+
+            // Validate if size is one of S, M, L, XL or empty
+            if (!size.isEmpty() && !helper.isValidSize(size)) {
+                System.out.println("Invalid size. Please use one of {S|M|L|XL}.");
+                return;
+            }
+
+            String record = LocalDateTime.now().format(formatter) + " DESCRIBE " + taskName + " " + description + (size.isEmpty() ? "" : " " + size);
+            helper.logToDataStore(record);
         }
+
+
+        public void defineSizeTask(String[] args) {
+            if (!helper.checkArgLength(args, 3, "size")) {
+                return;
+            }
+
+            String taskName = args[1];
+            String size = args[2];
+
+            // Validate if size is one of S, M, L, XL
+            if (!helper.isValidSize(size)) {
+                System.out.println("Invalid size. Please use one of {S|M|L|XL}.");
+                return;
+            }
+
+            String record = LocalDateTime.now().format(formatter) + " SIZE " + taskName + " " + size;
+            helper.logToDataStore(record);
+        }
+
+        public void renameTask(String[] args) {
+            if (!helper.checkArgLength(args, 3, "rename")) {
+                return;
+            }
+
+            String oldTaskName = args[1];
+            String newTaskName = args[2];
+
+            String record = LocalDateTime.now().format(formatter) + " RENAME " + oldTaskName + " " + newTaskName;
+            helper.logToDataStore(record);
+        }
+
 
         // ... other methods for different commands like describe, size, rename, delete, summary
     }
@@ -116,6 +163,18 @@ public class TM {
                 System.out.println("Error reading data store: " + e.getMessage());
             }
             return taskStatus;
+        }
+
+        public boolean isValidSize(String size) {
+            return size.matches("S|M|L|XL");
+        }
+
+        public boolean checkArgLength(String[] args, int requiredLength, String commandName) {
+            if (args.length < requiredLength) {
+                System.out.println("Insufficient arguments for " + commandName + " command.");
+                return false;
+            }
+            return true;
         }
     }
 
