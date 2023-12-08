@@ -24,10 +24,10 @@ public class TM {
             case "stop":
                 taskCommands.stopTask(args[1]);
                 break;
-         /*   case "describe":
-                describeTask(args);
+            case "describe":
+                taskCommands.describeTask(args[1]);
                 break;
-            case "size":
+          /*   case "size":
                 defineSizeTask(args);
                 break;
             case "rename":
@@ -74,6 +74,10 @@ public class TM {
             String record = LocalDateTime.now().format(formatter) + " STOP " + taskName;
             helper.logToDataStore(record);
             taskStatus.put(taskName, false);
+        }
+
+        public void describeTask(String taskName){
+            return;
         }
 
         // ... other methods for different commands like describe, size, rename, delete, summary
