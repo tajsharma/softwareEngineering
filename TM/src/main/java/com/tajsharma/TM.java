@@ -33,10 +33,10 @@ public class TM {
             case "rename":
                 taskCommands.renameTask(args);
                 break;
-          /*  case "delete":
-                deleteTask(args);
+            case "delete":
+                taskCommands.deleteTask(args);
                 break;
-            case "summary":
+            /*case "summary":
                 summaryOfTask(args);
                 break;   */
             default:
@@ -124,8 +124,20 @@ public class TM {
 
             String record = LocalDateTime.now().format(formatter) + " RENAME " + oldTaskName + " " + newTaskName;
             helper.logToDataStore(record);
+            // add functionality to not rename a task that hasent been crated yet
         }
 
+        public void deleteTask(String[] args) {
+            if (!helper.checkArgLength(args, 2, "delete")) {
+                return;
+            }
+
+            String taskName = args[1];
+
+            String record = LocalDateTime.now().format(formatter) + " DELETE " + taskName;
+            helper.logToDataStore(record);
+        }
+        // add functionality to not delete a task that hasent been crated yet
 
         // ... other methods for different commands like describe, size, rename, delete, summary
     }
