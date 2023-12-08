@@ -5,8 +5,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
+import java.time.Duration;
+import java.util.*;
 public class TM {
     public static void main(String[] args) {
         TaskCommands taskCommands = new TaskCommands();
@@ -36,9 +36,9 @@ public class TM {
             case "delete":
                 taskCommands.deleteTask(args);
                 break;
-            /*case "summary":
-                summaryOfTask(args);
-                break;   */
+            case "summary":
+                taskCommands.summaryOfTasks();
+                break;
             default:
                 System.out.println("Invalid command. Please use a valid command.");
         }
@@ -133,11 +133,73 @@ public class TM {
             }
 
             String taskName = args[1];
-
+            // add functionality to not delete a task that hasent been crated yet
             String record = LocalDateTime.now().format(formatter) + " DELETE " + taskName;
             helper.logToDataStore(record);
         }
-        // add functionality to not delete a task that hasent been crated yet
+
+        public void summaryOfTasks() {
+            Map<String, List<String>> taskRecords = helper.loadTaskRecordsFromDataStore();
+            Map<String, String> currentNames = new HashMap<>();
+            Map<String, Long> timeSpent = new HashMap<>();
+
+            for (String key : taskRecords.keySet()) {
+                List<String> records = taskRecords.get(key);
+                String currentName = key;
+
+                for (String record : records) {
+                    String[] parts = record.split(" ");
+                    String command = parts[2];
+                    String taskName = parts[3];
+
+                    switch (command) {
+                        case "RENAME":
+                            String newName = parts[4];
+                            currentNames.put(taskName, newName);
+                            currentName = newName;
+                            break;
+                        case "DELETE":
+                            timeSpent.remove(currentName);
+                            break;
+                        case "START":
+                        case "STOP":
+                            updateTaskTime(timeSpent, parts, currentName, command);
+                            break;
+                    }
+                }
+
+                if (currentNames.containsKey(key)) {
+                    String finalName = currentNames.get(key);
+                    timeSpent.put(finalName, timeSpent.getOrDefault(key, 0L));
+                    timeSpent.remove(key);
+                }
+            }
+
+            for (Map.Entry<String, Long> entry : timeSpent.entrySet()) {
+                System.out.println("Task: " + entry.getKey() + ", Time Spent: " + formatDuration(entry.getValue()));
+            }
+
+        }
+
+        private void updateTaskTime(Map<String, Long> timeSpent, String[] parts, String taskName, String command) {
+            String dateTime = parts[0] + " " + parts[1];
+            LocalDateTime time = LocalDateTime.parse(dateTime, formatter);
+            if (command.equals("START")) {
+                helper.startTimes.put(taskName, time);
+            } else {
+                LocalDateTime startTime = helper.startTimes.getOrDefault(taskName, time);
+                long duration = Duration.between(startTime, time).getSeconds();
+                timeSpent.put(taskName, timeSpent.getOrDefault(taskName, 0L) + duration);
+            }
+        }
+
+        private String formatDuration(long seconds) {
+            long hours = seconds / 3600;
+            long minutes = (seconds % 3600) / 60;
+            long secs = seconds % 60;
+            return String.format("%02d:%02d:%02d", hours, minutes, secs);
+        }
+
 
         // ... other methods for different commands like describe, size, rename, delete, summary
     }
@@ -187,6 +249,33 @@ public class TM {
                 return false;
             }
             return true;
+        }
+
+        public Map<String, LocalDateTime> startTimes = new HashMap<>();
+
+        public Map<String, List<String>> loadTaskRecordsFromDataStore() {
+            Map<String, List<String>> taskRecords = new HashMap<>();
+            Path path = Paths.get("datastore.txt");
+            if (!Files.exists(path)) {
+                return taskRecords;
+            }
+
+            try (BufferedReader reader = Files.newBufferedReader(path)) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = line.trim().split(" ");
+                    if (parts.length >= 3) {
+                        String command = parts[2];
+                        if (command.equals("START") || command.equals("STOP") || command.equals("RENAME") || command.equals("DELETE")) {
+                            String taskName = parts[3];
+                            taskRecords.computeIfAbsent(taskName, k -> new ArrayList<>()).add(line);
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                System.out.println("Error reading data store: " + e.getMessage());
+            }
+            return taskRecords;
         }
     }
 
