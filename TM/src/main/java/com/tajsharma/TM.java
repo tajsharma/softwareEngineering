@@ -47,7 +47,8 @@ public class TM {
     //class encapsulating all the commands we want to allow
     public static class TaskCommands {
         Helpers helper = new Helpers();
-        private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        private static final DateTimeFormatter formatter =
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         private Map<String, Boolean> taskStatus;
 
         public TaskCommands() {
@@ -87,11 +88,14 @@ public class TM {
 
             // Validate if size is one of S, M, L, XL or empty
             if (!size.isEmpty() && !helper.isValidSize(size)) {
-                System.out.println("Invalid size. Please use one of {S|M|L|XL}.");
+                System.out.println("Invalid size. " +
+                        "Please use one of {S|M|L|XL}.");
                 return;
             }
 
-            String record = LocalDateTime.now().format(formatter) + " DESCRIBE " + taskName + " " + description + (size.isEmpty() ? "" : " " + size);
+            String record = LocalDateTime.now().format(formatter) +
+                    " DESCRIBE " + taskName + " "
+                    + description + (size.isEmpty() ? "" : " " + size);
             helper.logToDataStore(record);
         }
 
@@ -122,7 +126,8 @@ public class TM {
             String oldTaskName = args[1];
             String newTaskName = args[2];
 
-            String record = LocalDateTime.now().format(formatter) + " RENAME " + oldTaskName + " " + newTaskName;
+            String record = LocalDateTime.now().format(formatter) +
+                    " RENAME " + oldTaskName + " " + newTaskName;
             helper.logToDataStore(record);
             // add functionality to not rename a task that hasent been crated yet
         }
@@ -138,29 +143,40 @@ public class TM {
             helper.logToDataStore(record);
         }
 
-        public void summaryOfTasks(String [] args) {
-            // Determine if filtering by task name or size
-            long totalTimeSpent = 0;
-
-            String filterTask = null;
-            String filterSize = null;
-            if (args.length > 1) {
-                if (helper.isValidSize(args[1])) {
-                    filterSize = args[1];
-                } else {
-                    filterTask = args[1];
-                }
-            }
+        public void summaryOfTasks(String[] args) {
+            String filterTask = determineFilterTask(args);
+            String filterSize = determineFilterSize(args);
 
             Map<String, List<String>> taskRecords = helper.loadTaskRecordsFromDataStore();
-            Map<String, String> taskSizes = new HashMap<>(); // Tracks the size of each task
-            Map<String, Long> timeSpent = new HashMap<>(); // Tracks time spent on each task
-            Map<String, String> latestTaskNames = new HashMap<>(); // Map to track the latest name of each task
-            Map<String, String> taskDescriptions = new HashMap<>(); // Map to track the description of each task
-            Map<String, Long> sizeTotalTime = new HashMap<>();
-            Map<String, Long> sizeMinTime = new HashMap<>();
-            Map<String, Long> sizeMaxTime = new HashMap<>();
-            Map<String, Integer> sizeTaskCount = new HashMap<>();
+            Map<String, String> taskSizes = new HashMap<>();
+            Map<String, Long> timeSpent = new HashMap<>();
+            Map<String, String> latestTaskNames = new HashMap<>();
+            Map<String, String> taskDescriptions = new HashMap<>();
+            Set<String> deletedTasks = new HashSet<>();  // Initialize the set for deleted tasks
+
+            processTaskRecords(taskRecords, taskSizes, timeSpent, latestTaskNames, taskDescriptions, deletedTasks);
+
+            printTaskSummaries(timeSpent, taskSizes, taskDescriptions, filterTask, filterSize);
+            printSizeBasedStatistics(timeSpent, taskSizes);
+        }
+
+        private String determineFilterTask(String[] args) {
+            if (args.length > 1 && !helper.isValidSize(args[1])) {
+                return args[1];
+            }
+            return null;
+        }
+
+        private String determineFilterSize(String[] args) {
+            if (args.length > 1 && helper.isValidSize(args[1])) {
+                return args[1];
+            }
+            return null;
+        }
+
+        private void processTaskRecords(Map<String, List<String>> taskRecords, Map<String, String> taskSizes,
+                                        Map<String, Long> timeSpent, Map<String, String> latestTaskNames,
+                                        Map<String, String> taskDescriptions, Set<String> deletedTasks) {
 
             for (String key : taskRecords.keySet()) {
                 List<String> records = taskRecords.get(key);
@@ -178,6 +194,10 @@ public class TM {
                         case "RENAME":
                             String newName = parts[4];
                             latestTaskNames.put(taskName, newName);
+                            if (deletedTasks.contains(taskName)) {
+                                deletedTasks.add(newName);
+                                deletedTasks.remove(taskName);
+                            }
                             if (timeSpent.containsKey(taskName)) {
                                 timeSpent.put(newName, timeSpent.get(taskName));
                                 timeSpent.remove(taskName);
@@ -198,11 +218,15 @@ public class TM {
                             taskSizes.put(latestNameForSize, size);
                             break;
                         case "DELETE":
-                            timeSpent.remove(currentName);
-                            taskSizes.remove(currentName);
+                            deletedTasks.add(taskName); // Mark this task as deleted
+                            timeSpent.remove(taskName);
+                            taskSizes.remove(taskName);
+                            taskDescriptions.remove(taskName);
                             break;
                         case "DESCRIBE":
-                            String description = String.join(" ", Arrays.copyOfRange(parts, 4, parts.length));
+                            String description = String.join(" ",
+                                    Arrays.copyOfRange(parts, 4, parts.length));
+
                             taskDescriptions.put(taskName, description);
                             break;
                         case "START":
@@ -212,8 +236,12 @@ public class TM {
                     }
                 }
             }
+        }
+        private void printTaskSummaries(Map<String, Long> timeSpent, Map<String,
+                String> taskSizes, Map<String, String> taskDescriptions,
+                                        String filterTask, String filterSize) {
 
-            // Output the summary
+            long totalTimeSpent = 0;
 
             for (Map.Entry<String, Long> entry : timeSpent.entrySet()) {
                 String task = entry.getKey();
@@ -221,31 +249,45 @@ public class TM {
                 String description = taskDescriptions.getOrDefault(task, "No description");
                 long timeSpentOnTask = entry.getValue();
 
-                if ((filterTask != null && !filterTask.equals(task)) || (filterSize != null && !filterSize.equals(size))) {
+                if ((filterTask != null && !filterTask.equals(task))
+                        || (filterSize != null && !filterSize.equals(size))) {
                     continue;
                 }
-                System.out.println("Task: " + task + ", Size:" + size + ", Time Spent: " + formatDuration(entry.getValue())+ ", Description: " + description);
+                System.out.println("Task: " + task + ", Size:" +
+                        size + ", Time Spent: " + formatDuration(timeSpentOnTask) +
+                        ", Description: " + description);
                 totalTimeSpent += timeSpentOnTask;
-
-                sizeTotalTime.put(size, sizeTotalTime.getOrDefault(size, 0L) + timeSpentOnTask);
-                sizeTaskCount.put(size, sizeTaskCount.getOrDefault(size, 0) + 1);
-                sizeMinTime.put(size, Math.min(sizeMinTime.getOrDefault(size, Long.MAX_VALUE), timeSpentOnTask));
-                sizeMaxTime.put(size, Math.max(sizeMaxTime.getOrDefault(size, Long.MIN_VALUE), timeSpentOnTask));
             }
 
+            System.out.println("Total time spent on tasks: " + formatDuration(totalTimeSpent));
+        }
 
-            // Output size-based statistics (place this after the existing loop)
+        private void printSizeBasedStatistics(Map<String, Long> timeSpent, Map<String, String> taskSizes) {
+            Map<String, Long> sizeTotalTime = new HashMap<>();
+            Map<String, Long> sizeMinTime = new HashMap<>();
+            Map<String, Long> sizeMaxTime = new HashMap<>();
+            Map<String, Integer> sizeTaskCount = new HashMap<>();
+
+            for (Map.Entry<String, Long> entry : timeSpent.entrySet()) {
+                String size = taskSizes.getOrDefault(entry.getKey(), "");
+                long time = entry.getValue();
+
+                sizeTotalTime.put(size, sizeTotalTime.getOrDefault(size, 0L) + time);
+                sizeMinTime.put(size, Math.min(sizeMinTime.getOrDefault(size, Long.MAX_VALUE), time));
+                sizeMaxTime.put(size, Math.max(sizeMaxTime.getOrDefault(size, Long.MIN_VALUE), time));
+                sizeTaskCount.put(size, sizeTaskCount.getOrDefault(size, 0) + 1);
+            }
+
             for (String size : new String[]{"S", "M", "L", "XL"}) {
-                Integer count = sizeTaskCount.get(size);
-                if (count != null && count >= 2) {
+                if (sizeTaskCount.getOrDefault(size, 0) >= 2) {
                     long total = sizeTotalTime.get(size);
                     long min = sizeMinTime.get(size);
                     long max = sizeMaxTime.get(size);
-                    double avg = (double) total / count;
-                    System.out.println("Size " + size + " - Min: " + formatDuration(min) + ", Max: " + formatDuration(max) + ", Avg: " + formatDuration((long) avg));
+                    double avg = (double) total / sizeTaskCount.get(size);
+                    System.out.println("Size " + size + " - Min: " + formatDuration(min) +
+                            ", Max: " + formatDuration(max) + ", Avg: " + formatDuration((long) avg));
                 }
             }
-            System.out.println("Total time spent on tasks: " + formatDuration(totalTimeSpent));
         }
 
 
@@ -274,7 +316,8 @@ public class TM {
 
     public static class Helpers{
         private void logToDataStore(String record) {
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter("datastore.txt", true))) {
+            try (BufferedWriter writer =
+                         new BufferedWriter(new FileWriter("datastore.txt", true))) {
                 writer.write(record);
                 writer.newLine();
             } catch (IOException e) {
@@ -294,11 +337,10 @@ public class TM {
                 while ((line = reader.readLine()) != null) {
                     String[] parts = line.trim().split(" ");
                     if (parts.length >= 4) {
-                        String taskName = parts[3]; // Assuming task name is the fourth part
-                        boolean isStart = parts[2].equalsIgnoreCase("START"); // The third part is the status
+                        String taskName = parts[3];
+                        boolean isStart = parts[2].equalsIgnoreCase("START");
                         taskStatus.put(taskName, isStart);
 
-                        // Debugging output
                     }
                 }
             } catch (IOException e) {
