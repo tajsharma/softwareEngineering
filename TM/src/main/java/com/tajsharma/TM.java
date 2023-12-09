@@ -157,6 +157,10 @@ public class TM {
             Map<String, Long> timeSpent = new HashMap<>(); // Tracks time spent on each task
             Map<String, String> latestTaskNames = new HashMap<>(); // Map to track the latest name of each task
             Map<String, String> taskDescriptions = new HashMap<>(); // Map to track the description of each task
+            Map<String, Long> sizeTotalTime = new HashMap<>();
+            Map<String, Long> sizeMinTime = new HashMap<>();
+            Map<String, Long> sizeMaxTime = new HashMap<>();
+            Map<String, Integer> sizeTaskCount = new HashMap<>();
 
             for (String key : taskRecords.keySet()) {
                 List<String> records = taskRecords.get(key);
@@ -222,8 +226,25 @@ public class TM {
                 }
                 System.out.println("Task: " + task + ", Size:" + size + ", Time Spent: " + formatDuration(entry.getValue())+ ", Description: " + description);
                 totalTimeSpent += timeSpentOnTask;
+
+                sizeTotalTime.put(size, sizeTotalTime.getOrDefault(size, 0L) + timeSpentOnTask);
+                sizeTaskCount.put(size, sizeTaskCount.getOrDefault(size, 0) + 1);
+                sizeMinTime.put(size, Math.min(sizeMinTime.getOrDefault(size, Long.MAX_VALUE), timeSpentOnTask));
+                sizeMaxTime.put(size, Math.max(sizeMaxTime.getOrDefault(size, Long.MIN_VALUE), timeSpentOnTask));
             }
 
+
+            // Output size-based statistics (place this after the existing loop)
+            for (String size : new String[]{"S", "M", "L", "XL"}) {
+                Integer count = sizeTaskCount.get(size);
+                if (count != null && count >= 2) {
+                    long total = sizeTotalTime.get(size);
+                    long min = sizeMinTime.get(size);
+                    long max = sizeMaxTime.get(size);
+                    double avg = (double) total / count;
+                    System.out.println("Size " + size + " - Min: " + formatDuration(min) + ", Max: " + formatDuration(max) + ", Avg: " + formatDuration((long) avg));
+                }
+            }
             System.out.println("Total time spent on tasks: " + formatDuration(totalTimeSpent));
         }
 
