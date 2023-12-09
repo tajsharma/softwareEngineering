@@ -37,7 +37,7 @@ public class TM {
                 taskCommands.deleteTask(args);
                 break;
             case "summary":
-                taskCommands.summaryOfTasks();
+                taskCommands.summaryOfTasks(args);
                 break;
             default:
                 System.out.println("Invalid command. Please use a valid command.");
@@ -138,10 +138,23 @@ public class TM {
             helper.logToDataStore(record);
         }
 
-        public void summaryOfTasks() {
+        public void summaryOfTasks(String [] args) {
+            // Determine if filtering by task name or size
+            String filterTask = null;
+            String filterSize = null;
+            if (args.length > 1) {
+                if (helper.isValidSize(args[1])) {
+                    filterSize = args[1];
+                } else {
+                    filterTask = args[1];
+                }
+            }
+
             Map<String, List<String>> taskRecords = helper.loadTaskRecordsFromDataStore();
-            Map<String, String> currentNames = new HashMap<>();
-            Map<String, Long> timeSpent = new HashMap<>();
+            Map<String, String> currentNames = new HashMap<>(); // Tracks the current name of the task
+            Map<String, String> taskSizes = new HashMap<>(); // Tracks the size of each task
+            Map<String, Long> timeSpent = new HashMap<>(); // Tracks time spent on each task
+            Map<String, String> latestTaskNames = new HashMap<>(); // Map to track the latest name of each task
 
             for (String key : taskRecords.keySet()) {
                 List<String> records = taskRecords.get(key);
@@ -152,14 +165,31 @@ public class TM {
                     String command = parts[2];
                     String taskName = parts[3];
 
+                    // Use the latest task name if it has been renamed
+                    taskName = latestTaskNames.getOrDefault(taskName, taskName);
+
                     switch (command) {
                         case "RENAME":
                             String newName = parts[4];
-                            currentNames.put(taskName, newName);
-                            currentName = newName;
+                            latestTaskNames.put(taskName, newName);
+                            if (timeSpent.containsKey(taskName)) {
+                                timeSpent.put(newName, timeSpent.get(taskName));
+                                timeSpent.remove(taskName);
+                            }
+                            if (taskSizes.containsKey(taskName)) {
+                                taskSizes.put(newName, taskSizes.get(taskName));
+                                taskSizes.remove(taskName);
+                            }
+                            break;
+                        case "SIZE":
+                            String size = parts[4];
+                            // Use the latest name for size assignment
+                            String latestNameForSize = latestTaskNames.getOrDefault(taskName, taskName);
+                            taskSizes.put(latestNameForSize, size);
                             break;
                         case "DELETE":
                             timeSpent.remove(currentName);
+                            taskSizes.remove(currentName);
                             break;
                         case "START":
                         case "STOP":
@@ -167,19 +197,19 @@ public class TM {
                             break;
                     }
                 }
-
-                if (currentNames.containsKey(key)) {
-                    String finalName = currentNames.get(key);
-                    timeSpent.put(finalName, timeSpent.getOrDefault(key, 0L));
-                    timeSpent.remove(key);
-                }
             }
 
+            // Output the summary
             for (Map.Entry<String, Long> entry : timeSpent.entrySet()) {
-                System.out.println("Task: " + entry.getKey() + ", Time Spent: " + formatDuration(entry.getValue()));
+                String task = entry.getKey();
+                String size = taskSizes.getOrDefault(task, "");
+                if ((filterTask != null && !filterTask.equals(task)) || (filterSize != null && !filterSize.equals(size))) {
+                    continue;
+                }
+                System.out.println("Task: " + task + ", Size: " + size + ", Time Spent: " + formatDuration(entry.getValue()));
             }
-
         }
+
 
         private void updateTaskTime(Map<String, Long> timeSpent, String[] parts, String taskName, String command) {
             String dateTime = parts[0] + " " + parts[1];
@@ -263,14 +293,20 @@ public class TM {
             try (BufferedReader reader = Files.newBufferedReader(path)) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    String[] parts = line.trim().split(" ");
-                    if (parts.length >= 3) {
-                        String command = parts[2];
-                        if (command.equals("START") || command.equals("STOP") || command.equals("RENAME") || command.equals("DELETE")) {
-                            String taskName = parts[3];
-                            taskRecords.computeIfAbsent(taskName, k -> new ArrayList<>()).add(line);
-                        }
+                    // Split the line into date-time and the rest
+                    String[] parts = line.split(" ", 3); // Split into 3 parts: date, time, and the rest
+                    if (parts.length < 3) {
+                        continue; // Skip lines that don't have at least 3 parts
                     }
+                    String commandLine = parts[2]; // The rest of the line containing the command and other details
+                    String[] commandParts = commandLine.split(" "); // Split the command line into parts
+                    if (commandParts.length < 2) {
+                        continue; // Skip lines that don't have a command and task name
+                    }
+                    String command = commandParts[0];
+                    String taskName = commandParts[1];
+
+                    taskRecords.computeIfAbsent(taskName, k -> new ArrayList<>()).add(line);
                 }
             } catch (IOException e) {
                 System.out.println("Error reading data store: " + e.getMessage());
