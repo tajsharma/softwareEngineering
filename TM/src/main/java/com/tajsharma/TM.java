@@ -140,6 +140,8 @@ public class TM {
 
         public void summaryOfTasks(String [] args) {
             // Determine if filtering by task name or size
+            long totalTimeSpent = 0;
+
             String filterTask = null;
             String filterSize = null;
             if (args.length > 1) {
@@ -151,10 +153,10 @@ public class TM {
             }
 
             Map<String, List<String>> taskRecords = helper.loadTaskRecordsFromDataStore();
-            Map<String, String> currentNames = new HashMap<>(); // Tracks the current name of the task
             Map<String, String> taskSizes = new HashMap<>(); // Tracks the size of each task
             Map<String, Long> timeSpent = new HashMap<>(); // Tracks time spent on each task
             Map<String, String> latestTaskNames = new HashMap<>(); // Map to track the latest name of each task
+            Map<String, String> taskDescriptions = new HashMap<>(); // Map to track the description of each task
 
             for (String key : taskRecords.keySet()) {
                 List<String> records = taskRecords.get(key);
@@ -180,6 +182,10 @@ public class TM {
                                 taskSizes.put(newName, taskSizes.get(taskName));
                                 taskSizes.remove(taskName);
                             }
+                            if (taskDescriptions.containsKey(taskName)) {
+                                taskDescriptions.put(newName, taskDescriptions.get(taskName));
+                                taskDescriptions.remove(taskName);
+                            }
                             break;
                         case "SIZE":
                             String size = parts[4];
@@ -191,6 +197,10 @@ public class TM {
                             timeSpent.remove(currentName);
                             taskSizes.remove(currentName);
                             break;
+                        case "DESCRIBE":
+                            String description = String.join(" ", Arrays.copyOfRange(parts, 4, parts.length));
+                            taskDescriptions.put(taskName, description);
+                            break;
                         case "START":
                         case "STOP":
                             updateTaskTime(timeSpent, parts, currentName, command);
@@ -200,14 +210,21 @@ public class TM {
             }
 
             // Output the summary
+
             for (Map.Entry<String, Long> entry : timeSpent.entrySet()) {
                 String task = entry.getKey();
                 String size = taskSizes.getOrDefault(task, "");
+                String description = taskDescriptions.getOrDefault(task, "No description");
+                long timeSpentOnTask = entry.getValue();
+
                 if ((filterTask != null && !filterTask.equals(task)) || (filterSize != null && !filterSize.equals(size))) {
                     continue;
                 }
-                System.out.println("Task: " + task + ", Size: " + size + ", Time Spent: " + formatDuration(entry.getValue()));
+                System.out.println("Task: " + task + ", Size:" + size + ", Time Spent: " + formatDuration(entry.getValue())+ ", Description: " + description);
+                totalTimeSpent += timeSpentOnTask;
             }
+
+            System.out.println("Total time spent on tasks: " + formatDuration(totalTimeSpent));
         }
 
 
